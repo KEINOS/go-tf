@@ -1,6 +1,8 @@
 GO ?= go
 PKGS ?= ./tf/...
 GO_TEST_FLAGS ?= -race -cover
+GO_BENCH_FLAGS ?= -run '^$$' -bench Benchmark -benchmem -count=1
+FUZZ_TIME ?= 3s
 
 define run-check
 	@output_file=$$(mktemp); \
@@ -26,6 +28,21 @@ build:
 .PHONY: test
 test:
 	$(call run-check,go test,$(GO) test $(GO_TEST_FLAGS) $(PKGS))
+
+.PHONY: bench
+bench:
+	$(call run-check,go benchmark,$(GO) test $(PKGS) $(GO_BENCH_FLAGS))
+
+.PHONY: fuzz
+fuzz: fuzz-new-model fuzz-forward
+
+.PHONY: fuzz-new-model
+fuzz-new-model:
+	$(call run-check,fuzz new model dimensions,$(GO) test $(PKGS) -run '^$$' -fuzz '^FuzzNewModelDimensions$$' -fuzztime $(FUZZ_TIME))
+
+.PHONY: fuzz-forward
+fuzz-forward:
+	$(call run-check,fuzz forward indices,$(GO) test $(PKGS) -run '^$$' -fuzz '^FuzzModelForwardIndices$$' -fuzztime $(FUZZ_TIME))
 
 .PHONY: lint
 lint: lint-go lint-md lint-yaml
