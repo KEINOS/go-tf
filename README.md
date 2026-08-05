@@ -43,19 +43,19 @@ Create a model and run a forward pass:
 ```go
 backend, err := nn.NewTensorBackend(nn.UseCPU)
 if err != nil {
- log.Fatal(err)
+    log.Fatal(err)
 }
 defer backend.Close()
 
 model, err := tf.NewModel(backend, 4, 3, nn.NewGenerator(42, 0))
 if err != nil {
- log.Fatal(err)
+    log.Fatal(err)
 }
 defer model.Close()
 
 out, err := model.Forward([]int{2, 1}, 2)
 if err != nil {
- log.Fatal(err)
+    log.Fatal(err)
 }
 
 fmt.Println(out.Value().Shape()) // [2 3]
@@ -66,27 +66,27 @@ Snapshot parameters and load them into another model:
 ```go
 src, err := tf.NewModel(backend, 4, 3, nn.NewGenerator(1, 0))
 if err != nil {
- log.Fatal(err)
+    log.Fatal(err)
 }
 defer src.Close()
 
 dst, err := tf.NewModel(backend, 4, 3, nn.NewGenerator(2, 0))
 if err != nil {
- log.Fatal(err)
+    log.Fatal(err)
 }
 defer dst.Close()
 
 state, err := src.StateDict()
 if err != nil {
- log.Fatal(err)
+    log.Fatal(err)
 }
 if err := dst.LoadStateDict(state); err != nil {
- log.Fatal(err)
+    log.Fatal(err)
 }
 
 loaded, err := dst.StateDict()
 if err != nil {
- log.Fatal(err)
+    log.Fatal(err)
 }
 fmt.Println(len(loaded.Entries())) // 1
 ```
@@ -96,28 +96,28 @@ Save and restore training checkpoint state:
 ```go
 optimizer, err := model.NewOptimizer(backend, nn.NewTensorAdamConfig())
 if err != nil {
- log.Fatal(err)
+    log.Fatal(err)
 }
 defer optimizer.Close()
 
 ctx, err := nn.NewExecutionContext(nn.Training, nn.NewGenerator(42, 0))
 if err != nil {
- log.Fatal(err)
+    log.Fatal(err)
 }
 
 var checkpoint bytes.Buffer
 if err := model.WriteTrainingCheckpoint(&checkpoint, optimizer, ctx); err != nil {
- log.Fatal(err)
+    log.Fatal(err)
 }
 
 restored, err := model.RestoreTrainingCheckpoint(
- bytes.NewReader(checkpoint.Bytes()),
- backend,
- optimizer,
- nn.DefaultCheckpointLimits(),
+    bytes.NewReader(checkpoint.Bytes()),
+    backend,
+    optimizer,
+    nn.DefaultCheckpointLimits(),
 )
 if err != nil {
- log.Fatal(err)
+    log.Fatal(err)
 }
 
 fmt.Println(restored.Mode() == nn.Training) // true
@@ -130,3 +130,9 @@ See [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md) for development commands,
 ## Security
 
 See [.github/SECURITY.md](.github/SECURITY.md).
+
+## License
+
+Copyright (c) 2026 KEINOS and go-tf contributors.
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE).
