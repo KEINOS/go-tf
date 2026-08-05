@@ -1,5 +1,5 @@
 GO ?= go
-PKGS ?= ./...
+PKGS ?= ./tf/...
 GO_TEST_FLAGS ?= -race -cover
 
 define run-check
