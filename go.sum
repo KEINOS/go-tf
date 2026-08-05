@@ -1,3 +1,7 @@
+github.com/KEINOS/go-nn v0.0.0-20260804054120-af2830796c91 h1:6OKNTfXu6KPCPDeswmcbHonJUzUfB1mkhXUDETc1ylU=
+github.com/KEINOS/go-nn v0.0.0-20260804054120-af2830796c91/go.mod h1:kerzHHStAICRIaNLvTXjduAc2CzKMt2SLils8oyksw8=
+github.com/KEINOS/go-wgpu-mat v0.0.4 h1:wOHD9Q0XG6AiytzYsgsaQylvPuDnbmEjZzNnU/qvXo4=
+github.com/KEINOS/go-wgpu-mat v0.0.4/go.mod h1:U4kaxSx5Pfzi66TfhHjZNOjikbX5OfO7sKZVWfTJSPI=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/go-webgpu/goffi v0.6.2 h1:xuMaUbqsNQ/xiyy5UwAKZb5vQZUDg9QRCrJIpHJaXSE=

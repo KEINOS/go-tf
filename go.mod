@@ -2,7 +2,7 @@ module github.com/KEINOS/go-tf
 
 go 1.26.5
 
-require github.com/KEINOS/go-nn v0.0.0
+require github.com/KEINOS/go-nn v0.0.0-20260804054120-af2830796c91
 
 require (
 	github.com/KEINOS/go-wgpu-mat v0.0.4 // indirect
@@ -14,7 +14,3 @@ require (
 	github.com/gogpu/wgpu v0.30.30 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 )
-
-replace github.com/KEINOS/go-nn => ../go-nn
-
-replace github.com/KEINOS/go-wgpu-mat => ../go-wgpu-mat
