@@ -27,6 +27,7 @@ var (
 type Model struct {
 	modules   *nn.ModuleCollection
 	embedding *nn.TensorEmbeddingModule
+	params    []*nn.Parameter
 }
 
 // NewModel creates a minimal token-embedding model state on backend.
@@ -66,7 +67,7 @@ func NewModel(
 		return nil, fmt.Errorf("register token embedding module: %w", err)
 	}
 
-	return &Model{modules: modules, embedding: embedding}, nil
+	return &Model{modules: modules, embedding: embedding, params: modules.Parameters()}, nil
 }
 
 // Forward gathers token embedding rows with an explicit index shape.
@@ -96,7 +97,7 @@ func (model *Model) Parameters() []*nn.Parameter {
 		return nil
 	}
 
-	return model.modules.Parameters()
+	return model.params
 }
 
 // StateDict returns a device-independent immutable model snapshot.
