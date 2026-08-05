@@ -2,167 +2,362 @@ package tf
 
 import (
 	"bytes"
-	"reflect"
+	"errors"
 	"testing"
 
 	"github.com/KEINOS/go-nn/nn"
+	"github.com/KEINOS/go-nn/nn/nnerr"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestModelUsesGoNNParameterState(t *testing.T) {
-	t.Parallel()
-
 	backend, err := nn.NewTensorBackend(nn.UseCPU)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	t.Cleanup(backend.Close)
 
 	model, err := NewModel(backend, 3, 2, nn.NewGenerator(11, 0))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	t.Cleanup(model.Close)
 
 	parameters := model.Parameters()
-	if len(parameters) != 1 {
-		t.Fatalf("parameter count = %d, want 1", len(parameters))
-	}
-
-	if parameters[0].Name() != "token.embedding.weight" {
-		t.Fatalf("parameter name = %q", parameters[0].Name())
-	}
+	require.Len(t, parameters, 1)
+	assert.Equal(t, "token.embedding.weight", parameters[0].Name())
 
 	state, err := model.StateDict()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	shape := state.Entries()[0].Shape
-	if len(shape) != 2 || shape[0] != 3 || shape[1] != 2 {
-		t.Fatalf("shape = %v, want [3 2]", shape)
-	}
+	require.Len(t, shape, 2)
+	assert.Equal(t, 3, shape[0])
+	assert.Equal(t, 2, shape[1])
 }
 
 func TestModelForwardConsumesTensorEmbeddingPrimitive(t *testing.T) {
-	t.Parallel()
-
 	backend, err := nn.NewTensorBackend(nn.UseCPU)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	t.Cleanup(backend.Close)
 	model, err := NewModel(backend, 3, 2, nn.NewGenerator(12, 0))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	t.Cleanup(model.Close)
 
 	output, err := model.Forward([]int{2, 0}, 2)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got := output.Value().Shape(); len(got) != 2 || got[0] != 2 || got[1] != 2 {
-		t.Fatalf("shape = %v, want [2 2]", got)
-	}
+	require.NoError(t, err)
+	got := output.Value().Shape()
+	require.Len(t, got, 2)
+	assert.Equal(t, 2, got[0])
+	assert.Equal(t, 2, got[1])
 
 	loss, err := output.Sum()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err = loss.Backward(); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, loss.Backward())
 	optimizer, err := model.NewOptimizer(backend, nn.NewTensorAdamConfig())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	t.Cleanup(optimizer.Close)
-	if err = optimizer.Step(); err != nil {
-		t.Fatal(err)
-	}
-	if optimizer.StepCount() != 1 {
-		t.Fatalf("optimizer step = %d, want 1", optimizer.StepCount())
-	}
+	require.NoError(t, optimizer.Step())
+	assert.EqualValues(t, 1, optimizer.StepCount())
 }
 
 func TestModelTrainingCheckpointRoundTrip(t *testing.T) {
-	t.Parallel()
-
 	backend, err := nn.NewTensorBackend(nn.UseCPU)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	t.Cleanup(backend.Close)
 	generator := nn.NewGenerator(77, 3)
 	model, err := NewModel(backend, 3, 2, generator)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	t.Cleanup(model.Close)
 	optimizer, err := model.NewOptimizer(backend, nn.NewTensorAdamConfig())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	t.Cleanup(optimizer.Close)
 
 	output, err := model.Forward([]int{0}, 1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	loss, err := output.Sum()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err = loss.Backward(); err != nil {
-		t.Fatal(err)
-	}
-	if err = optimizer.Step(); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, loss.Backward())
+	require.NoError(t, optimizer.Step())
 	context, err := nn.NewExecutionContext(nn.Training, generator)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	wantModel, err := model.StateDict()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	wantOptimizer, err := optimizer.State()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	var encoded bytes.Buffer
-	if err = model.WriteTrainingCheckpoint(&encoded, optimizer, context); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, model.WriteTrainingCheckpoint(&encoded, optimizer, context))
 	restored, err := model.RestoreTrainingCheckpoint(
 		bytes.NewReader(encoded.Bytes()), backend, optimizer, nn.DefaultCheckpointLimits(),
 	)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	gotModel, err := model.StateDict()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	gotOptimizer, err := optimizer.State()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !equalStateEntries(wantModel.Entries(), gotModel.Entries()) ||
-		!equalOptimizerState(wantOptimizer, gotOptimizer) {
-		t.Fatal("training checkpoint did not reproduce model and optimizer state")
-	}
-	if restored.Mode() != nn.Training {
-		t.Fatalf("restored mode = %v, want training", restored.Mode())
-	}
+	require.NoError(t, err)
+	assert.Equal(t, wantModel.Entries(), gotModel.Entries())
+	assert.Equal(t, wantOptimizer, gotOptimizer)
+	assert.Equal(t, nn.Training, restored.Mode())
 }
 
-func equalStateEntries(left, right []nn.StateEntry) bool {
-	return reflect.DeepEqual(left, right)
+func TestModelLoadStateDict(t *testing.T) {
+	backend, err := nn.NewTensorBackend(nn.UseCPU)
+	require.NoError(t, err)
+	t.Cleanup(backend.Close)
+
+	model1, err := NewModel(backend, 4, 3, nn.NewGenerator(1, 0))
+	require.NoError(t, err)
+	t.Cleanup(model1.Close)
+
+	model2, err := NewModel(backend, 4, 3, nn.NewGenerator(2, 0))
+	require.NoError(t, err)
+	t.Cleanup(model2.Close)
+
+	state1, err := model1.StateDict()
+	require.NoError(t, err)
+
+	require.NoError(t, model2.LoadStateDict(state1))
+
+	state2, err := model2.StateDict()
+	require.NoError(t, err)
+	assert.Equal(t, state1.Entries(), state2.Entries())
 }
 
-func equalOptimizerState(left, right nn.TensorAdamState) bool {
-	return reflect.DeepEqual(left, right)
+func TestNewModelRejectsInvalidDimensions(t *testing.T) {
+	backend, err := nn.NewTensorBackend(nn.UseCPU)
+	require.NoError(t, err)
+	t.Cleanup(backend.Close)
+
+	_, err = NewModel(backend, 0, 2, nn.NewGenerator(1, 0))
+	require.ErrorIs(t, err, nnerr.ErrInvalidDimension)
+
+	_, err = NewModel(backend, 2, 0, nn.NewGenerator(1, 0))
+	require.ErrorIs(t, err, nnerr.ErrInvalidDimension)
+}
+
+func TestNewModelWrapsModuleCollectionError(t *testing.T) {
+	original := newModuleCollection
+	t.Cleanup(func() {
+		newModuleCollection = original
+	})
+
+	sentinel := errors.New("module collection boom")
+	newModuleCollection = func(*nn.TensorBackend) (*nn.ModuleCollection, error) {
+		return nil, sentinel
+	}
+
+	_, err := NewModel(nil, 3, 2, nn.NewGenerator(1, 0))
+	require.Error(t, err)
+	assert.ErrorIs(t, err, sentinel)
+	assert.ErrorContains(t, err, "create model modules")
+}
+
+func TestNewModelWrapsEmbeddingCreationError(t *testing.T) {
+	original := newTensorEmbedding
+	t.Cleanup(func() {
+		newTensorEmbedding = original
+	})
+
+	sentinel := errors.New("embedding boom")
+	newTensorEmbedding = func(
+		*nn.TensorBackend,
+		string,
+		int,
+		int,
+		nn.Initializer,
+		nn.Generator,
+	) (*nn.TensorEmbeddingModule, error) {
+		return nil, sentinel
+	}
+
+	backend, err := nn.NewTensorBackend(nn.UseCPU)
+	require.NoError(t, err)
+	t.Cleanup(backend.Close)
+
+	_, err = NewModel(backend, 3, 2, nn.NewGenerator(1, 0))
+	require.Error(t, err)
+	assert.ErrorIs(t, err, sentinel)
+	assert.ErrorContains(t, err, "create token embedding")
+}
+
+func TestNewModelWrapsRegisterError(t *testing.T) {
+	original := registerModule
+	t.Cleanup(func() {
+		registerModule = original
+	})
+
+	sentinel := errors.New("register boom")
+	registerModule = func(*nn.ModuleCollection, string, nn.Module) error {
+		return sentinel
+	}
+
+	backend, err := nn.NewTensorBackend(nn.UseCPU)
+	require.NoError(t, err)
+	t.Cleanup(backend.Close)
+
+	_, err = NewModel(backend, 3, 2, nn.NewGenerator(1, 0))
+	require.Error(t, err)
+	assert.ErrorIs(t, err, sentinel)
+	assert.ErrorContains(t, err, "register token embedding module")
+}
+
+func TestModelNilReceiverGuards(t *testing.T) {
+	var model *Model
+
+	_, err := model.Forward([]int{0}, 1)
+	require.ErrorIs(t, err, nnerr.ErrNilTensor)
+
+	_, err = model.NewOptimizer(nil, nn.NewTensorAdamConfig())
+	require.ErrorIs(t, err, nnerr.ErrNilTensor)
+
+	assert.Nil(t, model.Parameters())
+
+	_, err = model.StateDict()
+	require.ErrorIs(t, err, nnerr.ErrNilTensor)
+
+	err = model.LoadStateDict(nn.StateDict{})
+	require.ErrorIs(t, err, nnerr.ErrNilTensor)
+
+	err = model.WriteTrainingCheckpoint(&bytes.Buffer{}, nil, nn.ExecutionContext{})
+	require.ErrorIs(t, err, nnerr.ErrNilTensor)
+
+	_, err = model.RestoreTrainingCheckpoint(
+		bytes.NewReader(nil),
+		nil,
+		nil,
+		nn.DefaultCheckpointLimits(),
+	)
+	require.ErrorIs(t, err, nnerr.ErrNilTensor)
+
+	model.Close()
+}
+
+func TestWriteTrainingCheckpointWrapsSnapshotError(t *testing.T) {
+	original := newTrainingCheckpoint
+	t.Cleanup(func() {
+		newTrainingCheckpoint = original
+	})
+
+	sentinel := errors.New("snapshot boom")
+	newTrainingCheckpoint = func(
+		*nn.ModuleCollection,
+		*nn.TensorAdam,
+		nn.ExecutionContext,
+	) (nn.TrainingCheckpoint, error) {
+		return nn.TrainingCheckpoint{}, sentinel
+	}
+
+	backend, err := nn.NewTensorBackend(nn.UseCPU)
+	require.NoError(t, err)
+	t.Cleanup(backend.Close)
+
+	model, err := NewModel(backend, 3, 2, nn.NewGenerator(1, 0))
+	require.NoError(t, err)
+	t.Cleanup(model.Close)
+
+	err = model.WriteTrainingCheckpoint(&bytes.Buffer{}, nil, nn.ExecutionContext{})
+	require.Error(t, err)
+	assert.ErrorIs(t, err, sentinel)
+	assert.ErrorContains(t, err, "snapshot training checkpoint")
+}
+
+func TestWriteTrainingCheckpointReturnsWriterError(t *testing.T) {
+	backend, err := nn.NewTensorBackend(nn.UseCPU)
+	require.NoError(t, err)
+	t.Cleanup(backend.Close)
+
+	model, err := NewModel(backend, 3, 2, nn.NewGenerator(1, 0))
+	require.NoError(t, err)
+	t.Cleanup(model.Close)
+
+	optimizer, err := model.NewOptimizer(backend, nn.NewTensorAdamConfig())
+	require.NoError(t, err)
+	t.Cleanup(optimizer.Close)
+
+	context, err := nn.NewExecutionContext(nn.Training, nn.NewGenerator(1, 0))
+	require.NoError(t, err)
+
+	err = model.WriteTrainingCheckpoint(errorWriter{}, optimizer, context)
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "write boom")
+}
+
+func TestRestoreTrainingCheckpointWrapsReadError(t *testing.T) {
+	backend, err := nn.NewTensorBackend(nn.UseCPU)
+	require.NoError(t, err)
+	t.Cleanup(backend.Close)
+
+	model, err := NewModel(backend, 3, 2, nn.NewGenerator(1, 0))
+	require.NoError(t, err)
+	t.Cleanup(model.Close)
+
+	_, err = model.RestoreTrainingCheckpoint(
+		bytes.NewReader([]byte("not-a-checkpoint")),
+		backend,
+		nil,
+		nn.DefaultCheckpointLimits(),
+	)
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "read training checkpoint")
+}
+
+func TestRestoreTrainingCheckpointWrapsRestoreError(t *testing.T) {
+	original := restoreCheckpoint
+	t.Cleanup(func() {
+		restoreCheckpoint = original
+	})
+
+	sentinel := errors.New("restore boom")
+	restoreCheckpoint = func(
+		*nn.TensorBackend,
+		*nn.ModuleCollection,
+		*nn.TensorAdam,
+		nn.TrainingCheckpoint,
+	) (nn.ExecutionContext, error) {
+		return nn.ExecutionContext{}, sentinel
+	}
+
+	backend, err := nn.NewTensorBackend(nn.UseCPU)
+	require.NoError(t, err)
+	t.Cleanup(backend.Close)
+
+	model, err := NewModel(backend, 3, 2, nn.NewGenerator(1, 0))
+	require.NoError(t, err)
+	t.Cleanup(model.Close)
+
+	optimizer, err := model.NewOptimizer(backend, nn.NewTensorAdamConfig())
+	require.NoError(t, err)
+	t.Cleanup(optimizer.Close)
+
+	context, err := nn.NewExecutionContext(nn.Training, nn.NewGenerator(1, 0))
+	require.NoError(t, err)
+
+	var checkpoint bytes.Buffer
+	require.NoError(t, model.WriteTrainingCheckpoint(&checkpoint, optimizer, context))
+
+	_, err = model.RestoreTrainingCheckpoint(
+		bytes.NewReader(checkpoint.Bytes()),
+		backend,
+		optimizer,
+		nn.DefaultCheckpointLimits(),
+	)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, sentinel)
+	assert.ErrorContains(t, err, "restore training checkpoint")
+}
+
+func TestCloseIsIdempotent(t *testing.T) {
+	backend, err := nn.NewTensorBackend(nn.UseCPU)
+	require.NoError(t, err)
+	t.Cleanup(backend.Close)
+
+	model, err := NewModel(backend, 3, 2, nn.NewGenerator(1, 0))
+	require.NoError(t, err)
+
+	model.Close()
+	model.Close()
+}
+
+type errorWriter struct{}
+
+func (errorWriter) Write([]byte) (int, error) {
+	return 0, errors.New("write boom")
 }
