@@ -1,0 +1,57 @@
+name: CI
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  lint-and-test:
+    name: Lint and Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout go-tf
+        uses: actions/checkout@v4
+      - name: Checkout go-nn
+        uses: actions/checkout@v4
+        with:
+          repository: KEINOS/go-nn
+          path: .deps/go-nn
+      - name: Checkout go-wgpu-mat
+        uses: actions/checkout@v4
+        with:
+          repository: KEINOS/go-wgpu-mat
+          path: .deps/go-wgpu-mat
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install lint tools
+        run: |
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+          go install github.com/google/yamlfmt/cmd/yamlfmt@latest
+          npm install -g markdownlint-cli2
+      - name: Point local replace directives to checked out dependencies
+        run: |
+          go mod edit -replace github.com/KEINOS/go-nn=./.deps/go-nn
+          go mod edit -replace github.com/KEINOS/go-wgpu-mat=./.deps/go-wgpu-mat
+      - name: Run lint
+        run: make lint
+      - name: Run unit test
+        run: make test

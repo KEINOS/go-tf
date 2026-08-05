@@ -1,0 +1,19 @@
+# Deny all files and directories by default.
+/*
+
+# Allow only explicitly managed root files.
+!/.gitignore
+!/Makefile
+!/go.mod
+!/go.sum
+!/model.go
+!/model_test.go
+!/.github/
+!/.github/workflows/
+!/.github/workflows/ci.yml
+
+# Allow lint/style configuration files.
+!/.golangci.yml
+!/.markdownlint-cli2.yaml
+!/.yamlfmt
+!/.editorconfig

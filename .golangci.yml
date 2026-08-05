@@ -1,0 +1,12 @@
+version: "2"
+run:
+  tests: true
+  allow-parallel-runners: true
+linters:
+  default: standard
+  settings:
+    gomoddirectives:
+      replace-local: true
+      replace-allow-list:
+        - github.com/KEINOS/go-nn
+        - github.com/KEINOS/go-wgpu-mat
