@@ -11,6 +11,8 @@
 !/tf/
 !/tf/*.go
 !/.github/
+!/.github/CONTRIBUTING.md
+!/.github/SECURITY.md
 !/.github/workflows/
 !/.github/workflows/ci.yml
 

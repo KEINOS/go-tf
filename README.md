@@ -26,16 +26,9 @@ go mod tidy
 make check
 ```
 
-## Development Commands
+## Contributing
 
-```bash
-make test      # go test -race -cover ./...
-make build     # go build ./...
-make lint      # golangci-lint + markdownlint + yamlfmt
-make lint-fix  # apply automatic fixes where supported
-make check     # lint-fix + test + build + module verification
-make clean     # clean Go test cache
-```
+See [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md) for development commands, test expectations, and the contribution workflow.
 
 ## Package Overview
 
@@ -48,10 +41,6 @@ Package `tf` currently provides:
 - `WriteTrainingCheckpoint` and `RestoreTrainingCheckpoint`: persist and restore full training state, including optimizer and execution context.
 - `Close`: releases model-owned parameter state.
 
-## Tests
+## Security
 
-The test suite validates:
-
-- Stable parameter registration and expected tensor shapes.
-- Forward pass integration with go-nn tensor embedding.
-- Training checkpoint round trip reproducibility for model and optimizer state.
+See [.github/SECURITY.md](.github/SECURITY.md).
