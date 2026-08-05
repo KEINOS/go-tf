@@ -106,42 +106,6 @@ func BenchmarkModelForwardBatch256(b *testing.B) {
 	benchmarkForward(b, indices, len(indices))
 }
 
-func BenchmarkModelParametersVariants(b *testing.B) {
-	backend, err := nn.NewTensorBackend(nn.UseCPU)
-	if err != nil {
-		b.Fatal(err)
-	}
-	b.Cleanup(backend.Close)
-
-	model, err := NewModel(backend, 512, 128, nn.NewGenerator(6, 0))
-	if err != nil {
-		b.Fatal(err)
-	}
-	b.Cleanup(model.Close)
-
-	b.Run("original", func(b *testing.B) {
-		b.ReportAllocs()
-
-		for b.Loop() {
-			params := model.modules.Parameters()
-			if len(params) == 0 {
-				b.Fatal("empty parameters")
-			}
-		}
-	})
-
-	b.Run("enhanced", func(b *testing.B) {
-		b.ReportAllocs()
-
-		for b.Loop() {
-			params := model.Parameters()
-			if len(params) == 0 {
-				b.Fatal("empty parameters")
-			}
-		}
-	})
-}
-
 func benchmarkForward(b *testing.B, indices []int, shape int) {
 	b.Helper()
 
