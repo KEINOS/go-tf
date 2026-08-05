@@ -23,6 +23,11 @@ jobs:
     steps:
       - name: Checkout go-tf
         uses: actions/checkout@v7.0.1
+      - name: Normalize line endings to LF
+        run: |
+          git config --local core.autocrlf false
+          git config --local core.eol lf
+          git reset --hard HEAD
       - name: Setup Go
         uses: actions/setup-go@v7.0.0
         with:
@@ -40,8 +45,6 @@ jobs:
         with:
           globs: "**/*.md"
       - name: Run yamlfmt lint
-        if: runner.os != 'Windows'
         run: make lint-yaml
       - name: Run unit test
-        if: runner.os != 'Windows'
         run: make test
