@@ -40,6 +40,7 @@ jobs:
         with:
           globs: "**/*.md"
       - name: Run yamlfmt lint
+        if: runner.os != 'Windows'
         run: make lint-yaml
       - name: Run unit test
         run: make test
