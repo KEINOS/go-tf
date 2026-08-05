@@ -6,30 +6,6 @@ go-tf is a model-specific Transformer consumer in Go. It validates model-indepen
 
 This repository builds a small token-embedding model with go-nn primitives. It checks parameter ownership, forward behavior, optimizer stepping, and training checkpoint round trips.
 
-## Scope
-
-- Keep model-independent neural-network primitives in go-nn.
-- Keep model-specific composition and integration tests in go-tf.
-
-## Requirements
-
-- Go 1.26.5 or newer
-- Network access to download public Go modules from GitHub
-
-## Setup
-
-1. Clone this repository.
-2. Download modules and run checks:
-
-```bash
-go mod tidy
-make check
-```
-
-## Contributing
-
-See [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md) for development commands, test expectations, and the contribution workflow.
-
 ## Package Overview
 
 Package `tf` currently provides:
@@ -40,6 +16,116 @@ Package `tf` currently provides:
 - `StateDict` and `LoadStateDict`: snapshot and restore model parameter state.
 - `WriteTrainingCheckpoint` and `RestoreTrainingCheckpoint`: persist and restore full training state, including optimizer and execution context.
 - `Close`: releases model-owned parameter state.
+
+The scopes are:
+
+- Keep model-independent neural-network primitives in go-nn.
+- Keep model-specific composition and integration tests in go-tf.
+
+## Requirements
+
+- Go 1.26.5 or newer
+
+## Usage
+
+```bash
+# Install module
+go get "github.com/KEINOS/go-tf@latest"
+```
+
+```go
+// Use module
+import "github.com/KEINOS/go-tf/tf"
+```
+
+Create a model and run a forward pass:
+
+```go
+backend, err := nn.NewTensorBackend(nn.UseCPU)
+if err != nil {
+ log.Fatal(err)
+}
+defer backend.Close()
+
+model, err := tf.NewModel(backend, 4, 3, nn.NewGenerator(42, 0))
+if err != nil {
+ log.Fatal(err)
+}
+defer model.Close()
+
+out, err := model.Forward([]int{2, 1}, 2)
+if err != nil {
+ log.Fatal(err)
+}
+
+fmt.Println(out.Value().Shape()) // [2 3]
+```
+
+Snapshot parameters and load them into another model:
+
+```go
+src, err := tf.NewModel(backend, 4, 3, nn.NewGenerator(1, 0))
+if err != nil {
+ log.Fatal(err)
+}
+defer src.Close()
+
+dst, err := tf.NewModel(backend, 4, 3, nn.NewGenerator(2, 0))
+if err != nil {
+ log.Fatal(err)
+}
+defer dst.Close()
+
+state, err := src.StateDict()
+if err != nil {
+ log.Fatal(err)
+}
+if err := dst.LoadStateDict(state); err != nil {
+ log.Fatal(err)
+}
+
+loaded, err := dst.StateDict()
+if err != nil {
+ log.Fatal(err)
+}
+fmt.Println(len(loaded.Entries())) // 1
+```
+
+Save and restore training checkpoint state:
+
+```go
+optimizer, err := model.NewOptimizer(backend, nn.NewTensorAdamConfig())
+if err != nil {
+ log.Fatal(err)
+}
+defer optimizer.Close()
+
+ctx, err := nn.NewExecutionContext(nn.Training, nn.NewGenerator(42, 0))
+if err != nil {
+ log.Fatal(err)
+}
+
+var checkpoint bytes.Buffer
+if err := model.WriteTrainingCheckpoint(&checkpoint, optimizer, ctx); err != nil {
+ log.Fatal(err)
+}
+
+restored, err := model.RestoreTrainingCheckpoint(
+ bytes.NewReader(checkpoint.Bytes()),
+ backend,
+ optimizer,
+ nn.DefaultCheckpointLimits(),
+)
+if err != nil {
+ log.Fatal(err)
+}
+
+fmt.Println(restored.Mode() == nn.Training) // true
+```
+
+## Contributing
+
+See [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md) for development commands, test expectations, and the contribution workflow.
 
 ## Security
 
