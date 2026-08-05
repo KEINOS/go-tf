@@ -2,6 +2,7 @@ GO ?= go
 PKGS ?= ./tf/...
 GO_TEST_FLAGS ?= -race -cover
 GO_BENCH_FLAGS ?= -run '^$$' -bench Benchmark -benchmem -count=1
+BENCH_OUT_DIR ?= .bench
 FUZZ_TIME ?= 3s
 
 define run-check
@@ -31,7 +32,20 @@ test:
 
 .PHONY: bench
 bench:
-	$(call run-check,go benchmark,$(GO) test $(PKGS) $(GO_BENCH_FLAGS))
+	@mkdir -p '$(BENCH_OUT_DIR)'; \
+	output_file='$(BENCH_OUT_DIR)/bench_'$$(date +%Y%m%d_%H%M%S)'.txt'; \
+	printf '* Running go benchmark ... '; \
+	if $(GO) test $(PKGS) $(GO_BENCH_FLAGS) >"$$output_file" 2>&1; then \
+		printf 'OK\n'; \
+		cat "$$output_file"; \
+		printf '\nSaved benchmark log: %s\n' "$$output_file"; \
+		printf 'Verdict example: benchstat old.txt %s | verdict\n' "$$output_file"; \
+	else \
+		exit_code=$$?; \
+		printf 'FAILED\n'; \
+		cat "$$output_file"; \
+		exit "$$exit_code"; \
+	fi
 
 .PHONY: fuzz
 fuzz: fuzz-new-model fuzz-forward
