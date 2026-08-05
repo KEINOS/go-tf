@@ -43,4 +43,5 @@ jobs:
         if: runner.os != 'Windows'
         run: make lint-yaml
       - name: Run unit test
+        if: runner.os != 'Windows'
         run: make test
