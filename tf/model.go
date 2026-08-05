@@ -9,6 +9,20 @@ import (
 	"github.com/KEINOS/go-nn/nn/nnerr"
 )
 
+const tokenEmbeddingModuleName = "token.embedding"
+
+var (
+	newModuleCollection     = nn.NewModuleCollection
+	newTensorEmbedding      = nn.NewTensorEmbeddingModule
+	newTrainingCheckpoint   = nn.NewTrainingCheckpoint
+	writeTrainingCheckpoint = nn.WriteTrainingCheckpoint
+	readTrainingCheckpoint  = nn.ReadTrainingCheckpoint
+	restoreCheckpoint       = nn.RestoreTrainingCheckpoint
+	registerModule          = func(modules *nn.ModuleCollection, name string, module nn.Module) error {
+		return modules.RegisterModule(name, module)
+	}
+)
+
 // Model is the initial go-tf consumer of go-nn Module and Parameter state.
 type Model struct {
 	modules   *nn.ModuleCollection
@@ -25,14 +39,14 @@ func NewModel(
 		return nil, nnerr.ErrInvalidDimension
 	}
 
-	modules, err := nn.NewModuleCollection(backend)
+	modules, err := newModuleCollection(backend)
 	if err != nil {
 		return nil, fmt.Errorf("create model modules: %w", err)
 	}
 
-	embedding, err := nn.NewTensorEmbeddingModule(
+	embedding, err := newTensorEmbedding(
 		backend,
-		"token.embedding",
+		tokenEmbeddingModuleName,
 		vocabularySize,
 		embeddingSize,
 		nn.UniformInitializer(-0.02, 0.02),
@@ -44,7 +58,7 @@ func NewModel(
 		return nil, fmt.Errorf("create token embedding: %w", err)
 	}
 
-	err = modules.RegisterModule("token.embedding", embedding)
+	err = registerModule(modules, tokenEmbeddingModuleName, embedding)
 	if err != nil {
 		embedding.Close()
 		modules.Close()
@@ -113,12 +127,12 @@ func (model *Model) WriteTrainingCheckpoint(
 		return nnerr.ErrNilTensor
 	}
 
-	checkpoint, err := nn.NewTrainingCheckpoint(model.modules, optimizer, context)
+	checkpoint, err := newTrainingCheckpoint(model.modules, optimizer, context)
 	if err != nil {
 		return fmt.Errorf("snapshot training checkpoint: %w", err)
 	}
 
-	return nn.WriteTrainingCheckpoint(writer, checkpoint)
+	return writeTrainingCheckpoint(writer, checkpoint)
 }
 
 // RestoreTrainingCheckpoint atomically restores model and optimizer state.
@@ -132,12 +146,12 @@ func (model *Model) RestoreTrainingCheckpoint(
 		return nn.ExecutionContext{}, nnerr.ErrNilTensor
 	}
 
-	checkpoint, err := nn.ReadTrainingCheckpoint(reader, limits)
+	checkpoint, err := readTrainingCheckpoint(reader, limits)
 	if err != nil {
 		return nn.ExecutionContext{}, fmt.Errorf("read training checkpoint: %w", err)
 	}
 
-	context, err := nn.RestoreTrainingCheckpoint(backend, model.modules, optimizer, checkpoint)
+	context, err := restoreCheckpoint(backend, model.modules, optimizer, checkpoint)
 	if err != nil {
 		return nn.ExecutionContext{}, fmt.Errorf("restore training checkpoint: %w", err)
 	}
