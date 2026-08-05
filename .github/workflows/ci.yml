@@ -22,36 +22,24 @@ jobs:
         shell: bash
     steps:
       - name: Checkout go-tf
-        uses: actions/checkout@v4
-      - name: Checkout go-nn
-        uses: actions/checkout@v4
-        with:
-          repository: KEINOS/go-nn
-          path: .deps/go-nn
-      - name: Checkout go-wgpu-mat
-        uses: actions/checkout@v4
-        with:
-          repository: KEINOS/go-wgpu-mat
-          path: .deps/go-wgpu-mat
+        uses: actions/checkout@v7.0.1
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7.0.0
         with:
           go-version-file: go.mod
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-      - name: Install lint tools
+      - name: Install yamlfmt
         run: |
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
-          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
           go install github.com/google/yamlfmt/cmd/yamlfmt@latest
-          npm install -g markdownlint-cli2
-      - name: Point local replace directives to checked out dependencies
-        run: |
-          go mod edit -replace github.com/KEINOS/go-nn=./.deps/go-nn
-          go mod edit -replace github.com/KEINOS/go-wgpu-mat=./.deps/go-wgpu-mat
-      - name: Run lint
-        run: make lint
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v9.3.0
+        with:
+          version: latest
+      - name: Run markdownlint
+        uses: DavidAnson/markdownlint-cli2-action@v24.2.0
+        with:
+          globs: "**/*.md"
+      - name: Run yamlfmt lint
+        run: make lint-yaml
       - name: Run unit test
         run: make test
