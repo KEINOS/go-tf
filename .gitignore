@@ -4,6 +4,7 @@
 # Allow only explicitly managed root files.
 !/.gitignore
 !/Makefile
+!/LICENSE
 !/README.md
 !/go.mod
 !/go.sum
