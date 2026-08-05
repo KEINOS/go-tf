@@ -20,18 +20,20 @@ jobs:
         uses: actions/setup-go@v7.0.0
         with:
           go-version-file: go.mod
+      - name: Setup Node
+        uses: actions/setup-node@v7.0.0
+        with:
+          node-version: "22"
       - name: Install yamlfmt
         run: |
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
           go install github.com/google/yamlfmt/cmd/yamlfmt@latest
+      - name: Install markdownlint-cli2
+        run: npm install -g markdownlint-cli2
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v9.3.0
         with:
           version: latest
-      - name: Run markdownlint
-        uses: DavidAnson/markdownlint-cli2-action@v24.2.0
-        with:
-          globs: "**/*.md"
       - name: Run lint
         run: make lint
   unit-test:
