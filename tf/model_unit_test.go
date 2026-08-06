@@ -33,6 +33,69 @@ func TestModelUsesGoNNParameterState(t *testing.T) {
 	assert.Equal(t, 2, shape[1])
 }
 
+func TestModelParametersReturnsCallerOwnedSlice(t *testing.T) {
+	backend, err := nn.NewTensorBackend(nn.UseCPU)
+	require.NoError(t, err)
+	t.Cleanup(backend.Close)
+
+	model, err := NewModel(backend, 3, 2, nn.NewGenerator(11, 0))
+	require.NoError(t, err)
+	t.Cleanup(model.Close)
+
+	parameters := model.Parameters()
+	require.Len(t, parameters, 1)
+	want := parameters[0]
+
+	parameters[0] = nil
+	parameters = append(parameters, nil)
+	require.Len(t, parameters, 2)
+
+	got := model.Parameters()
+	require.Len(t, got, 1)
+	require.Same(t, want, got[0])
+	assert.Equal(t, "token.embedding.weight", got[0].Name())
+}
+
+func TestModelStateDictEntriesReturnCallerOwnedCopies(t *testing.T) {
+	backend, err := nn.NewTensorBackend(nn.UseCPU)
+	require.NoError(t, err)
+	t.Cleanup(backend.Close)
+
+	model, err := NewModel(backend, 3, 2, nn.NewGenerator(11, 0))
+	require.NoError(t, err)
+	t.Cleanup(model.Close)
+
+	state, err := model.StateDict()
+	require.NoError(t, err)
+
+	entries := state.Entries()
+	require.Len(t, entries, 1)
+	require.NotEmpty(t, entries[0].Shape)
+	require.NotEmpty(t, entries[0].Data)
+
+	wantName := entries[0].Name
+	wantShape := append([]int(nil), entries[0].Shape...)
+	wantData := append([]float64(nil), entries[0].Data...)
+
+	entries[0].Name = "corrupted.name"
+	entries[0].Shape[0] = 99
+	entries[0].Data[0] = 99
+
+	gotSameState := state.Entries()
+	require.Len(t, gotSameState, 1)
+	assert.Equal(t, wantName, gotSameState[0].Name)
+	assert.Equal(t, wantShape, gotSameState[0].Shape)
+	assert.Equal(t, wantData, gotSameState[0].Data)
+
+	freshState, err := model.StateDict()
+	require.NoError(t, err)
+	gotFresh := freshState.Entries()
+	require.Len(t, gotFresh, 1)
+	assert.Equal(t, wantName, gotFresh[0].Name)
+	assert.Equal(t, wantShape, gotFresh[0].Shape)
+	assert.Equal(t, wantData, gotFresh[0].Data)
+}
+
 func TestModelForwardConsumesTensorEmbeddingPrimitive(t *testing.T) {
 	backend, err := nn.NewTensorBackend(nn.UseCPU)
 	require.NoError(t, err)

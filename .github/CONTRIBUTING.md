@@ -11,11 +11,16 @@ make test      # go test -race -cover ./...
 make build     # go build ./...
 make lint      # golangci-lint + markdownlint + yamlfmt
 make lint-fix  # apply automatic fixes where supported
+make fix       # alias for lint-fix
 make bench     # run benchmarks and save output to .bench/bench_*.txt
 make fuzz      # run all fuzz targets with bounded fuzz time
-make check     # lint-fix + test + build + module verification
+make check     # non-mutating lint + test + build + module verification
 make clean     # clean Go test cache
 ```
+
+## Validation policy
+
+`make check` is intentionally non-mutating. Use it for local pre-commit validation and CI-equivalent checks. Run `make fix` or `make lint-fix` only when you explicitly want automatic formatting or lint fixes to edit the working tree.
 
 ## Benchmark workflow for verdict
 

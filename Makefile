@@ -76,6 +76,9 @@ lint-yaml:
 .PHONY: lint-fix
 lint-fix: lint-go-fix lint-md-fix lint-yaml-fix
 
+.PHONY: fix
+fix: lint-fix
+
 .PHONY: lint-go-fix
 lint-go-fix:
 	$(call run-check,go fix,$(GO) fix $(PKGS))
@@ -98,7 +101,7 @@ mod-tidy:
 	$(call run-check,go mod tidy -diff,$(GO) mod tidy -diff)
 
 .PHONY: check
-check: lint-fix test build mod-verify mod-tidy
+check: lint test build mod-verify mod-tidy
 
 .PHONY: clean
 clean:

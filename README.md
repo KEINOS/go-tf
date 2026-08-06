@@ -1,14 +1,16 @@
 # go-tf
 
-go-tf is a model-specific Transformer consumer in Go. It validates model-independent contracts from [go-nn](https://github.com/KEINOS/go-nn).
+go-tf is a model-specific Go consumer for Transformer-oriented model composition. It validates model-independent contracts from [go-nn](https://github.com/KEINOS/go-nn).
 
-## Purpose
+## Current Scope
 
-This repository builds a small token-embedding model with go-nn primitives. It checks parameter ownership, forward behavior, optimizer stepping, and training checkpoint round trips.
+This repository currently builds a minimal token-embedding model with go-nn primitives. It checks parameter ownership, forward behavior, optimizer stepping, and training checkpoint round trips before larger Transformer blocks are assembled here.
+
+It does not yet expose a full Transformer architecture. Model-independent neural-network primitives stay in go-nn; this repository keeps model-specific composition and integration tests.
 
 ## Package Overview
 
-Package `tf` currently provides:
+Package `tf` currently provides the embedding-stage model surface:
 
 - `NewModel`: creates a minimal token embedding model using go-nn module primitives.
 - `Forward`: runs embedding lookup for token indices.
@@ -21,6 +23,16 @@ The scopes are:
 
 - Keep model-independent neural-network primitives in go-nn.
 - Keep model-specific composition and integration tests in go-tf.
+
+## Roadmap
+
+The planned path from the current embedding consumer to a minimal Transformer is:
+
+1. Keep the token embedding model stable as the integration baseline.
+2. Add model configuration APIs before constructor arguments grow.
+3. Consume positional embedding, attention, normalization, MLP, and loss primitives from go-nn as they become available.
+4. Assemble a minimal Transformer block and training example in go-tf without duplicating reusable primitives from go-nn.
+5. Keep checkpoints reproducible across model, optimizer, execution mode, and generator state.
 
 ## Requirements
 
