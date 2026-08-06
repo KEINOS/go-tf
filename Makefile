@@ -1,4 +1,6 @@
 GO ?= go
+GOFMT ?= gofmt
+GOFMT_PATHS ?= tf
 PKGS ?= ./tf/...
 GO_TEST_FLAGS ?= -race -cover
 GO_BENCH_FLAGS ?= -run '^$$' -bench Benchmark -benchmem -count=1
@@ -59,7 +61,11 @@ fuzz-forward:
 	$(call run-check,fuzz forward indices,$(GO) test $(PKGS) -run '^$$' -fuzz '^FuzzModelForwardIndices$$' -fuzztime $(FUZZ_TIME))
 
 .PHONY: lint
-lint: lint-go lint-md lint-yaml
+lint: fmt-go lint-go lint-md lint-yaml
+
+.PHONY: fmt-go
+fmt-go:
+	$(call run-check,gofmt,files="$$($(GOFMT) -l $(GOFMT_PATHS))"; test -z "$$files" || { printf '%s\n' "$$files"; exit 1; })
 
 .PHONY: lint-go
 lint-go:
@@ -74,10 +80,14 @@ lint-yaml:
 	$(call run-check,yamlfmt -lint,yamlfmt -conf .yamlfmt -lint .)
 
 .PHONY: lint-fix
-lint-fix: lint-go-fix lint-md-fix lint-yaml-fix
+lint-fix: fmt-go-fix lint-go-fix lint-md-fix lint-yaml-fix
 
 .PHONY: fix
 fix: lint-fix
+
+.PHONY: fmt-go-fix
+fmt-go-fix:
+	$(call run-check,gofmt -w,$(GOFMT) -w $(GOFMT_PATHS))
 
 .PHONY: lint-go-fix
 lint-go-fix:

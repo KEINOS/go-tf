@@ -9,8 +9,8 @@ Run these commands from the repository root.
 ```bash
 make test      # go test -race -cover ./...
 make build     # go build ./...
-make lint      # golangci-lint + markdownlint + yamlfmt
-make lint-fix  # apply automatic fixes where supported
+make lint      # gofmt + golangci-lint + markdownlint + yamlfmt
+make lint-fix  # apply gofmt and automatic fixes where supported
 make fix       # alias for lint-fix
 make bench     # run benchmarks and save output to .bench/bench_*.txt
 make fuzz      # run all fuzz targets with bounded fuzz time
